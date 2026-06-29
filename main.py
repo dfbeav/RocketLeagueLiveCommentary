@@ -16,8 +16,13 @@ from config import (
 HOST = "127.0.0.1"
 PORT = 49123
 
+TEAM_0 = ""
+TEAM_1 = ""
+
 SCORE_TEAM_0 = 0
 SCORE_TEAM_1 = 0
+
+TIME_REMAINING = 300
 
 
 def parse_messages(buffer: str):
@@ -59,6 +64,29 @@ def updateScore(data: dict):
 
     print(f"Score updated: Team 0 = {SCORE_TEAM_0}, Team 1 = {SCORE_TEAM_1}")
 
+def updateTime(data: dict):
+    global TIME_REMAINING
+    TIME_REMAINING = data.get("TimeRemaining", TIME_REMAINING)
+    print(f"Time updated: {TIME_REMAINING} seconds remaining")
+
+def updateTeams(data: dict):
+    global TEAM_0, TEAM_1
+
+    if TEAM_0 is not "" and TEAM_1 is not "":
+        return
+    
+    gameData = data.get("Game", [])
+    teams = gameData.get("Teams", [])
+    for team in teams:
+        team_num = team.get("TeamNum")
+        name = team.get("Name", "")
+        if team_num == 0:
+            TEAM_0 = name
+        elif team_num == 1:
+            TEAM_1 = name
+    print(f"Teams updated: Team 0 = {TEAM_0}, Team 1 = {TEAM_1}")
+
+
 async def handle_message(msg: dict):
     global SCORE_TEAM_0, SCORE_TEAM_1
     
@@ -71,15 +99,19 @@ async def handle_message(msg: dict):
     match event:
         case "MatchInitialized":
             announcerMessage = announcer.agent.invoke(
-                {"messages": [{"role": "user", "content": "Match initialized!"}]}
+                {"messages": [{"role": "user", "content": f"New game starting - teams are {TEAM_0} and {TEAM_1}"}]}
             )
             print(announcerMessage["messages"][-1].content)
             if ENABLE_AUDIO_GENERATION:
                 tts.speak(announcerMessage["messages"][-1].content, 1)
 
+
         case "UpdateState":
-            print(f"➕ UpdateState event received: data = {data}")
+            print(f"➕ UpdateState event received")
             updateScore(data)
+            updateTime(data)
+            updateTeams(data)
+
 
         case "GoalScored":
             scorer = data["Scorer"]["Name"]
@@ -107,6 +139,48 @@ async def handle_message(msg: dict):
                 if ENABLE_AUDIO_GENERATION:
                     tts.speak(announcerMessage["messages"][-1].content, 1)
 
+
+        case "StatfeedEvent":
+            event = data['EventName']
+            #player = data['MainTarget']['Name']
+
+            #print(f"Statfeed event: {event} by player {player}")
+            print(f"🏅 Statfeed event: {event}")
+
+            if "Goal" in event or event == "Shot":
+                return
+
+            if event is not None:
+                announcerMessage = announcer.agent.invoke(
+                    {"messages": [{"role": "user", "content": f"Statfeed event: {event}"}]}
+                )
+                print(announcerMessage["messages"][-1].content)
+                if ENABLE_AUDIO_GENERATION:
+                    tts.speak(announcerMessage["messages"][-1].content, 1)
+
+
+        case "CrossbarHit":
+            player = data['MainTarget']['Name']
+            print(f"Crossbar hit by player {player}")
+            if player is not None:
+                announcerMessage = announcer.agent.invoke(
+                    {"messages": [{"role": "user", "content": f"Crossbar hit by player {player}"}]}
+                )
+                print(announcerMessage["messages"][-1].content)
+                if ENABLE_AUDIO_GENERATION:
+                    tts.speak(announcerMessage["messages"][-1].content, 1)
+
+
+        # case "GoalReplayEnd":
+        #     print(f"Goal replay ended: data = {data}")
+        #     announcerMessage = announcer.agent.invoke(
+        #         {"messages": [{"role": "user", "content": f"Short comment about how awesome/cool/amazing/incredible that replay way was"}]}
+        #     )
+        #     print(announcerMessage["messages"][-1].content)
+        #     if ENABLE_AUDIO_GENERATION:
+        #         tts.speak(announcerMessage["messages"][-1].content, 1)
+
+
         case "MatchEnded":
             winner = data.get("WinnerTeamNum")
             print(f"Match ended: data = {data}")
@@ -118,8 +192,6 @@ async def handle_message(msg: dict):
                 elif winner == 1:
                     SCORE_TEAM_1 += 1
 
-        case "UpdateState":
-            pass  # Very noisy — handle if needed
 
         case _:
             pass # print(f"[{event}]", data)
@@ -130,16 +202,22 @@ async def main():
     print("Connected! Waiting for events...\n")
 
     buffer = ""
-    while True:
-        chunk = await reader.read(4096)
-        if not chunk:
-            print("Connection closed by game.")
-            break
+    try:
+        while True:
+            chunk = await reader.read(4096)
+            if not chunk:
+                print("Connection closed by game.")
+                break
 
-        buffer += chunk.decode("utf-8")
-        messages, buffer = parse_messages(buffer)
-        for msg in messages:
-            await handle_message(msg)
+            buffer += chunk.decode("utf-8")
+            messages, buffer = parse_messages(buffer)
+            for msg in messages:
+                await handle_message(msg)
+    except (asyncio.CancelledError, KeyboardInterrupt):
+        print("Shutting down...")
+    finally:
+        writer.close()
+        await writer.wait_closed()
 
 if __name__ == "__main__":
     asyncio.run(main())
