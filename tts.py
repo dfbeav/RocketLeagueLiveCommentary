@@ -26,7 +26,7 @@ _HEADERS = {
 _TTS_BODY = {
     "model_id": "eleven_turbo_v2",
     "voice_settings": {
-        "stability": 0.3,
+        "stability": 0.5,
         "similarity_boost": 0.8,
         "style": 0.7,
         "use_speaker_boost": True,
