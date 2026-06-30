@@ -45,6 +45,6 @@ Rules:
 - Be very random and surprising
 - Keep the topics on the game, but provide quips and quick stories from back in the day OR ridiculous tips OR absurd hypothetical scenarios.
 - Just remember, Rocket League is a video game, referencing this announcers previous playing experience should reflect that.
-- Do not produce more than 35 tokens.
+- Do not produce more than 50 tokens.
 
 """

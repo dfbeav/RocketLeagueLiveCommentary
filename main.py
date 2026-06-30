@@ -67,21 +67,20 @@ def updateScore(data: dict):
 
 def updateTime(data: dict):
     global TIME_REMAINING
-    #TIME_REMAINING = data["TimeRemaining"]
-    print(f"Time updated: {TIME_REMAINING} seconds remaining")
+    TIME_REMAINING = data["Game"]["TimeSeconds"]
+    print(f"Time: {TIME_REMAINING} seconds remaining")
 
 
 def updateTeams(data: dict):
     global TEAM_0, TEAM_1
 
-    if TEAM_0 is not "" and TEAM_1 is not "":
+    if TEAM_0 != "" and TEAM_1 != "":
         return
     
-    gameData = data.get("Game", [])
-    teams = gameData.get("Teams", [])
+    teams = data["Game"]["Teams"]
     for team in teams:
-        team_num = team.get("TeamNum")
-        name = team.get("Name", "")
+        team_num = team["TeamNum"]
+        name = team["Name"]
         if team_num == 0:
             TEAM_0 = name
         elif team_num == 1:
@@ -135,7 +134,6 @@ async def handle_message(msg: dict):
 
 
         case "UpdateState":
-            print(f"➕ UpdateState event received")
             updateScore(data)
             updateTime(data)
             updateTeams(data)
