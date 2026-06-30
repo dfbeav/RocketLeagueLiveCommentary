@@ -67,8 +67,14 @@ def updateScore(data: dict):
 
 def updateTime(data: dict):
     global TIME_REMAINING
+    milestones = [240, 180, 120, 60, 30]
+
     TIME_REMAINING = data["Game"]["TimeSeconds"]
     print(f"Time: {TIME_REMAINING} seconds remaining")
+    for milestone in milestones:
+        if TIME_REMAINING == milestone:
+            triggerAnnouncers(f"{TIME_REMAINING} seconds remaining - Score: {SCORE_TEAM_0} to {SCORE_TEAM_1} - Summarize the match so far", 'both')
+            break
 
 
 def updateTeams(data: dict):
@@ -164,14 +170,18 @@ async def handle_message(msg: dict):
 
         case "StatfeedEvent":
             event = data['EventName']
+            player = data['MainTarget']['Name']
+            team = data['MainTarget']['TeamNum']
+            teamName = TEAM_0 if team == 0 else TEAM_1
 
             #print(f"Statfeed event: {event} by player {player}")
 
-            if "Goal" in event or event == "Shot":
+            if "Goal" in event or event == "Shot" or event == "HatTrick":
                 return
 
             if event is not None:
-                triggerAnnouncers(f"Statfeed event: {event}", 'one')
+                print(f"Statfeed event: {data}")
+                triggerAnnouncers(f"Statfeed event: {event} by player {player} for team {teamName}", 'one')
 
 
         case "CrossbarHit":
