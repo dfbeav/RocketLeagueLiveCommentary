@@ -3,6 +3,7 @@ import json
 import announcer
 import tts
 import time
+import random
 
 from config import (
     ENABLE_ANNOUNCER_1,
@@ -24,6 +25,7 @@ SCORE_TEAM_1 = 0
 TIME_REMAINING = 300
 
 REPLAY_START_TIME = 0
+REPLAY_END_TIME = 0
 
 
 def triggerAnnouncers(message, announcersTriggered):
@@ -198,19 +200,24 @@ async def handle_message(msg: dict):
 
 
         case "GoalReplayEnd":
-            CURRENT_TIME = time.time()
+            REPLAY_END_TIME = time.time()
 
-            REPLAY_DURATION = CURRENT_TIME - REPLAY_START_TIME
+            REPLAY_DURATION = REPLAY_END_TIME - REPLAY_START_TIME
 
             print(f'Replay duration: {REPLAY_DURATION} seconds')
 
             # If REPLAY_DURATION is shorter than 5 seconds, skip the replay commentary
             if REPLAY_DURATION < 5:
                 return
+            
+            # Randomly decide whether to trigger a comment about the replay
+            trigger_comment = random.choice([True, False])
 
-            triggerAnnouncers(f"Short 2-4 word vague comment about the replay: 'That's a beautiful goal.' / 'That replay was incredible.' / 'Amazing shot there.'", 'two')
+            if trigger_comment == True:
+                triggerAnnouncers(f"Short 2-4 word vague comment about the replay: 'That's a beautiful goal.' / 'That replay was incredible.' / 'Amazing shot there.'", 'two')
 
             REPLAY_START_TIME = 0
+            REPLAY_END_TIME = 0
 
 
         case "MatchEnded":
