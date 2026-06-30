@@ -29,6 +29,7 @@ Rules:
 - Do not use hashtags, emojis, or ALL CAPS
 - Remember: There are only 5 minutes in a standard Rocket League match.
 - Do not reference events that have not occurred yet
+- Try to shorten names to nicknames if they have numbers in them (Nova13256 => Nova / Rx3L_89P => Rx / SuperCoolPlayer => SuperCoolPlayer / S9230DsOx => S9230)
 - Produce no more than 25 tokens.
 """
 
@@ -44,6 +45,7 @@ Rules:
 - Try to make the player laugh with nonsensical humor and non-sequitur statements.
 - Be very random and surprising
 - Keep the topics on the game, but provide quips and quick stories from back in the day OR ridiculous tips OR absurd hypothetical scenarios.
+- Try to shorten names to nicknames if they have numbers in them (Nova13256 => Nova / Rx3L_89P => Rx / SuperCoolPlayer => SuperCoolPlayer / S9230DsOx => S9230)
 - Just remember, Rocket League is a video game, referencing this announcers previous playing experience should reflect that.
 - Do not produce more than 50 tokens.
 

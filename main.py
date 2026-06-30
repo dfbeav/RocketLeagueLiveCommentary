@@ -26,6 +26,37 @@ TIME_REMAINING = 300
 REPLAY_START_TIME = 0
 
 
+def triggerAnnouncers(message, announcersTriggered):
+    if announcersTriggered not in ['one', 'two', 'both']:
+        return
+    
+
+    if (announcersTriggered == 'one' or announcersTriggered == 'both') and ENABLE_ANNOUNCER_1:
+        
+        announcerMessage = announcer.agent.invoke(
+            {"messages": [{"role": "user", "content": message}]},
+            announcer.get_config(),
+            context=announcer.AnnouncerContext(announcer=1)
+        )
+        
+        if ENABLE_AUDIO_GENERATION:
+            tts.speak(announcerMessage["messages"][-1].content, 1)
+
+
+    if (announcersTriggered == 'two' or announcersTriggered == 'both') and ENABLE_ANNOUNCER_2:
+        continueMessage = f"Add the color commentary from the previous announcer line, but don't restate anything that was previously mentioned - PREVIOUS MESSAGE: {message}"
+        contentValue = continueMessage if announcersTriggered == 'both' else message
+        
+        announcerMessage = announcer.agent.invoke(
+            {"messages": [{"role": "user", "content": contentValue}]},
+            announcer.get_config(),
+            context=announcer.AnnouncerContext(announcer=2)
+        )
+        
+        if ENABLE_AUDIO_GENERATION:
+            tts.speak(announcerMessage["messages"][-1].content, 2)
+
+
 def parse_messages(buffer: str):
     """Extract all complete JSON objects from a buffer, return (messages, remainder)."""
     messages = []
@@ -92,36 +123,6 @@ def updateTeams(data: dict):
         elif team_num == 1:
             TEAM_1 = name
     print(f"Teams updated: Team 0 = {TEAM_0}, Team 1 = {TEAM_1}")
-
-
-def triggerAnnouncers(message, announcersTriggered):
-    if announcersTriggered not in ['one', 'two', 'both']:
-        return
-    
-
-    if (announcersTriggered == 'one' or announcersTriggered == 'both') and ENABLE_ANNOUNCER_1:
-        
-        announcerMessage = announcer.agent.invoke(
-            {"messages": [{"role": "user", "content": message}]},
-            announcer.get_config(),
-            
-        )
-        
-        if ENABLE_AUDIO_GENERATION:
-            tts.speak(announcerMessage["messages"][-1].content, 1)
-
-
-    if (announcersTriggered == 'two' or announcersTriggered == 'both') and ENABLE_ANNOUNCER_2:
-        continueMessage = f"Add the color commentary from the previous announcer line, but don't restate anything that was previously mentioned - PREVIOUS MESSAGE: {message}"
-        contentValue = continueMessage if announcersTriggered == 'both' else message
-        
-        announcerMessage = announcer.agent.invoke(
-            {"messages": [{"role": "user", "content": contentValue}]},
-            announcer.get_config(),
-        )
-        
-        if ENABLE_AUDIO_GENERATION:
-            tts.speak(announcerMessage["messages"][-1].content, 2)
 
 
 async def handle_message(msg: dict):
@@ -207,7 +208,7 @@ async def handle_message(msg: dict):
             if REPLAY_DURATION < 5:
                 return
 
-            triggerAnnouncers(f"Short 2-3 word vague comment about the replay: 'Beautiful goal.' / 'Incredible play.' / 'Amazing shot.'", 'two')
+            triggerAnnouncers(f"Short 2-4 word vague comment about the replay: 'That's a beautiful goal.' / 'That replay was incredible.' / 'Amazing shot there.'", 'two')
 
             REPLAY_START_TIME = 0
 

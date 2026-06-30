@@ -1,4 +1,7 @@
+from dataclasses import dataclass
+
 from langchain.agents import create_agent
+from langchain.agents.middleware import dynamic_prompt, ModelRequest
 from langgraph.checkpoint.memory import InMemorySaver
 
 from config import (
@@ -9,10 +12,25 @@ from config import (
 
 checkpointer = InMemorySaver()
 
+ 
+@dataclass
+class AnnouncerContext:
+    # Per-invocation context: which announcer is speaking.
+    announcer: int = 1
+ 
+ 
+@dynamic_prompt
+def select_announcer_prompt(request: ModelRequest) -> str:
+    if request.runtime.context.announcer == 2:
+        return SYSTEM_PROMPT_2
+    return SYSTEM_PROMPT_1
+ 
+ 
 agent = create_agent(
     model="claude-haiku-4-5-20251001",
     checkpointer=checkpointer,
-    system_prompt=SYSTEM_PROMPT_1,
+    middleware=[select_announcer_prompt],
+    context_schema=AnnouncerContext,
 )
 
 
