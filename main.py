@@ -9,8 +9,6 @@ from config import (
     ENABLE_ANNOUNCER_1,
     ENABLE_ANNOUNCER_2,
     ENABLE_AUDIO_GENERATION,
-    SYSTEM_PROMPT_1,
-    SYSTEM_PROMPT_2,
 )
 
 HOST = "127.0.0.1"
@@ -22,13 +20,17 @@ TEAM_1 = ""
 SCORE_TEAM_0 = 0
 SCORE_TEAM_1 = 0
 
-TIME_REMAINING = 300
+GAME_CLOCK = 300
+GAME_STARTED = False
+IS_OVERTIME = False
+TOURNAMENT_BANTER_HAPPENED = False
 
 REPLAY_START_TIME = 0
 REPLAY_END_TIME = 0
 
 
-def triggerAnnouncers(message, announcersTriggered):
+def trigger_announcer(message, announcersTriggered):
+
     if announcersTriggered not in ['one', 'two', 'both']:
         return
     
@@ -60,7 +62,8 @@ def triggerAnnouncers(message, announcersTriggered):
 
 
 def parse_messages(buffer: str):
-    """Extract all complete JSON objects from a buffer, return (messages, remainder)."""
+    # Extract all complete JSON objects from a buffer, return (messages, remainder).
+
     messages = []
     i = 0
     while i < len(buffer):
@@ -80,7 +83,7 @@ def parse_messages(buffer: str):
     return messages, buffer[i:]
 
 
-def updateScore(data: dict):
+def update_score(data: dict):
     global SCORE_TEAM_0, SCORE_TEAM_1
     
     local_score_team_0 = 0
@@ -98,19 +101,35 @@ def updateScore(data: dict):
     SCORE_TEAM_1 = local_score_team_1
 
 
-def updateTime(data: dict):
-    global TIME_REMAINING
+def handle_time(data: dict):
+    global GAME_CLOCK, GAME_STARTED, TEAM_0, TEAM_1, SCORE_TEAM_0, SCORE_TEAM_1, TOURNAMENT_BANTER_HAPPENED
     milestones = [240, 180, 120, 60, 30]
 
-    TIME_REMAINING = data["Game"]["TimeSeconds"]
-    print(f"Time: {TIME_REMAINING} seconds remaining")
-    for milestone in milestones:
-        if TIME_REMAINING == milestone:
-            triggerAnnouncers(f"{TIME_REMAINING} seconds remaining - Score: {SCORE_TEAM_0} to {SCORE_TEAM_1} - Summarize the match so far", 'both')
-            break
+    GAME_CLOCK = data["Game"]["TimeSeconds"]
+    print(f"Time: {GAME_CLOCK} seconds remaining")
+    
+    if GAME_STARTED and GAME_CLOCK > 0:
+        for milestone in milestones:
+            if GAME_CLOCK == milestone:
+                trigger_announcer(f"{GAME_CLOCK} seconds remaining - Score: {SCORE_TEAM_0} to {SCORE_TEAM_1} - Summarize the match so far", 'both')
+                break
+    
+    else:
+        # This is a tournament countdown if the game has not started yet but we are receiving updates
+        if GAME_CLOCK >= 30 and not TOURNAMENT_BANTER_HAPPENED:
+            trigger_announcer(f"Tournament countdown: {GAME_CLOCK} till game start - Teams: {TEAM_0} and {TEAM_1}", 'one')
+            trigger_announcer("Tell a funny story about a Rocket League tournament in your past.", 'two')
+            # trigger_announcer("React to the most recent comment with a question about their funny story.", 'one')
+            # trigger_announcer("Answer the question in the previous comment.", 'two')
+            # #Only trigger the tournament banter once
+            TOURNAMENT_BANTER_HAPPENED = True
+
+    # If it's the last 10 seconds of the game and the score is tied, trigger an announcer alert
+    if GAME_CLOCK <= 10 and SCORE_TEAM_0 == SCORE_TEAM_1:
+        trigger_announcer(f"It's the last few seconds of the game and the score is tied at {SCORE_TEAM_0} to {SCORE_TEAM_1} - if no one scores, the game will go into overtime!", 'one')
 
 
-def updateTeams(data: dict):
+def set_teams(data: dict):
     global TEAM_0, TEAM_1
 
     if TEAM_0 != "" and TEAM_1 != "":
@@ -128,7 +147,7 @@ def updateTeams(data: dict):
 
 
 async def handle_message(msg: dict):
-    global SCORE_TEAM_0, SCORE_TEAM_1, REPLAY_START_TIME
+    global GAME_STARTED, TEAM_0, TEAM_1, SCORE_TEAM_0, SCORE_TEAM_1, REPLAY_START_TIME, IS_OVERTIME
     
     event = msg.get("Event")
 
@@ -137,15 +156,18 @@ async def handle_message(msg: dict):
         data = json.loads(data)
 
     match event:
-        case "MatchInitialized":
-            announcer.reset_match()
-            triggerAnnouncers(f"New game starting - teams are {TEAM_0} and {TEAM_1}", 'both')
-
 
         case "UpdateState":
-            updateScore(data)
-            updateTime(data)
-            updateTeams(data)
+            update_score(data)
+            handle_time(data)
+            set_teams(data)
+            if data["Game"]["bOvertime"] == True:
+                IS_OVERTIME = True
+
+
+        case "MatchInitialized":
+            GAME_STARTED = True
+            trigger_announcer(f"New game starting - teams are {TEAM_0} and {TEAM_1}", 'both')
 
 
         case "GoalScored":
@@ -161,14 +183,14 @@ async def handle_message(msg: dict):
             local_score_team_0 = SCORE_TEAM_0
             local_score_team_1 = SCORE_TEAM_1
 
-            # Add one goal to whatever team scored
+            # Add one goal to whatever team scored (score state does not update until tick after the goal event)
             if team == 0:
                 local_score_team_0 += 1
             elif team == 1:
                 local_score_team_1 += 1
 
             if scorer and team is not None:
-                triggerAnnouncers(f"Goal scored by {scorer} for team ({team}) - the score is now {local_score_team_0} to {local_score_team_1} - remaining time: {remaining_time} seconds", 'both')
+                trigger_announcer(f"Goal scored by {scorer} for team ({team}) - the score is now {local_score_team_0} to {local_score_team_1} - remaining time: {remaining_time} seconds", 'both')
 
 
         case "StatfeedEvent":
@@ -184,14 +206,14 @@ async def handle_message(msg: dict):
 
             if event is not None:
                 print(f"Statfeed event: {data}")
-                triggerAnnouncers(f"Statfeed event: {event} by player {player} for team {teamName}", 'one')
+                trigger_announcer(f"Statfeed event: {event} by player {player} for team {teamName}", 'one')
 
 
         case "CrossbarHit":
             player = data['BallLastTouch']['Player']['Name']
             print(f"Crossbar hit by player {player}")
             if player is not None:
-                triggerAnnouncers(f"Crossbar hit by player {player}", 'one')
+                trigger_announcer(f"Crossbar hit by player {player}", 'one')
 
 
         case "GoalReplayStart":
@@ -214,10 +236,15 @@ async def handle_message(msg: dict):
             trigger_comment = random.choice([True, False])
 
             if trigger_comment == True:
-                triggerAnnouncers(f"Short 2-4 word vague comment about the replay: 'That's a beautiful goal.' / 'That replay was incredible.' / 'Amazing shot there.'", 'two')
+                trigger_announcer(f"Short 2-4 word vague comment about the replay: 'That's a beautiful goal.' / 'That replay was incredible.' / 'Amazing shot there.'", 'two')
 
             REPLAY_START_TIME = 0
             REPLAY_END_TIME = 0
+
+
+        case "CountdownBegin":
+            if IS_OVERTIME:
+                trigger_announcer("Heading into overtime! First goal wins the game. Convey excitement!", "both")
 
 
         case "MatchEnded":
@@ -226,7 +253,11 @@ async def handle_message(msg: dict):
             team = TEAM_0 if winner == 0 else TEAM_1
             print(f"🎉 Match over! {team} wins!")
             if winner is not None:
-                triggerAnnouncers(f"Match ended - final score: {SCORE_TEAM_0} to {SCORE_TEAM_1}", 'both')
+                trigger_announcer(f"Match ended - final score: {SCORE_TEAM_0} to {SCORE_TEAM_1}", 'both')
+                trigger_announcer("Signoff and thank you for watching!", 'one')
+
+            announcer.reset_match()
+            GAME_STARTED = False
 
 
         case _:
