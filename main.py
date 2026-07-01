@@ -1,9 +1,29 @@
+"""
+An application for generating relevant sports commentary in real time via the official Rocket League API
+    Copyright (C) 2026 David Beaver
+
+This program is free software: you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published by
+the Free Software Foundation, either version 3 of the License, or
+(at your option) any later version.
+
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
+
+You should have received a copy of the GNU General Public License
+along with this program.  If not, see <https://www.gnu.org/licenses/>.
+"""
+
+
 import asyncio
 import json
 import announcer
 import tts
 import time
 import random
+import sys
 
 from config import (
     ENABLE_ANNOUNCER_1,
@@ -265,6 +285,29 @@ async def handle_message(msg: dict):
 
 
 async def main():
+    print("""
+        RocketLeagueLiveCommentary  Copyright (C) 2026  David Beaver
+          
+        This program comes with ABSOLUTELY NO WARRANTY.
+        This is free software, and you are welcome to redistribute it
+        under certain conditions.
+          
+        You should have received a copy of the GNU General Public License
+        along with this program.  If not, see <https://www.gnu.org/licenses/>.
+          
+          """)
+
+
+    # Check command-line arguments for `show w` and `show c`
+    if len(sys.argv) > 1:
+        if sys.argv[1] == "show" and len(sys.argv) > 2:
+            if sys.argv[2] == "w":
+                show_w()
+                return
+            elif sys.argv[2] == "c":
+                show_c()
+                return
+
     print(f"Connecting to {HOST}:{PORT}...")
     reader, writer = await asyncio.open_connection(HOST, PORT)
     print("Connected! Waiting for events...\n")

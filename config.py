@@ -9,9 +9,9 @@ ELEVENLABS_API_KEY  = os.getenv("ELEVENLABS_API_KEY", "")
 
 # ── Elevenlabs Voice Ids ────────────────────────────────────────────────────────────────
 # ELEVENLABS_VOICE_ID_1=keLVje3aBMuRpxuu0bqO
-ELEVENLABS_VOICE_ID_1 = GyIXYY876myKNtA1j8NI
+ELEVENLABS_VOICE_ID_1 = "GyIXYY876myKNtA1j8NI"
 # ELEVENTLABS_VOICE_ID_2=8n9Xb8GOqw6yNVOQ6ewr
-ELEVENLABS_VOICE_ID_2 = ewqWpiEvIU6795G1tjoW
+ELEVENLABS_VOICE_ID_2 = "ewqWpiEvIU6795G1tjoW"
 
 # ── Enable/Disable Announcers ──────────────────────────────────────────────────
 ENABLE_ANNOUNCER_1 = True  # set to False to disable announcer 1
