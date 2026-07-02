@@ -22,11 +22,13 @@ Real-time Rocket League commentary driven by the local Rocket League event feed,
    - `ANTHROPIC_API_KEY`
    - `ELEVENLABS_API_KEY`
 3. Install the Python packages:
-   - Windows: double-click `install_deps.bat`
-   - Or run: `python -m pip install -r requirements.txt`
+   - run: `python -m pip install -r requirements.txt`
 
 ## Run
 
+1. Run Rocket League
+
+2. Run the
 ```bash
 python main.py
 ```
