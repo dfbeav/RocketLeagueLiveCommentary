@@ -1,0 +1,7 @@
+langchain
+langgraph
+langchain-anthropic
+python-dotenv
+requests
+pygame
+anthropic

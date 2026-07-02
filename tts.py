@@ -39,6 +39,10 @@ _ANNOUNCER_VOLUMES = {
     2: 0.6,
 }
 
+from state import (
+    GAME_STARTED,
+)
+
 # ── Audio queue ───────────────────────────────────────────────────────────────
 _audio_queue: queue.Queue[tuple[str, int, int] | None] = queue.Queue()
 _worker_thread: threading.Thread | None = None
@@ -125,7 +129,7 @@ def _clear_queue():
 
 def _fetch_and_play(text: str, announcer: int):
     """Fetch audio from ElevenLabs and play it via pygame."""
-    print(f"[TTS] Fetching and playing (Announcer {announcer}): {text!r}")
+    print(f"[TTS] Fetching and playing (Announcer {announcer})")
     try:
         body = {**_TTS_BODY, "text": text}
         voice_id = ELEVENLABS_VOICE_ID_1 if announcer == 1 else ELEVENLABS_VOICE_ID_2
@@ -206,8 +210,10 @@ def speak(content_blocks, announcer: int):
         with _generation_lock:
             _generation += 1
             current_generation = _generation
-        _clear_queue()
-        print(f"[TTS] Announcer 1 priority — queue cleared (gen → {current_generation}).")
+
+        if GAME_STARTED:
+            _clear_queue()
+            print(f"[TTS] Announcer 1 priority — queue cleared (gen → {current_generation}).")
     else:
         with _generation_lock:
             current_generation = _generation

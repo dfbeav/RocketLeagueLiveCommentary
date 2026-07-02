@@ -34,19 +34,30 @@ from config import (
 HOST = "127.0.0.1"
 PORT = 49123
 
-TEAM_0 = ""
-TEAM_1 = ""
+from state import (
+    TEAM_0,
+    TEAM_1,
+    SCORE_TEAM_0,
+    SCORE_TEAM_1,
+    GAME_CLOCK,
+    GAME_STARTED,
+    IS_OVERTIME,
+    TOURNAMENT_BANTER_HAPPENED,
+    REPLAY_START_TIME,
+    REPLAY_END_TIME
+)
 
-SCORE_TEAM_0 = 0
-SCORE_TEAM_1 = 0
-
-GAME_CLOCK = 300
-GAME_STARTED = False
-IS_OVERTIME = False
-TOURNAMENT_BANTER_HAPPENED = False
-
-REPLAY_START_TIME = 0
-REPLAY_END_TIME = 0
+def strip_erranwous_json(raw: str) -> str:
+    # The announcer prompts instruct the model to reply as a JSON array,
+    # e.g. ["Great goal!", "Orange is really struggling."]
+    # Strip markdown code fences in case the model wraps the JSON in them.
+    stripped = raw
+    if stripped.startswith("```"):
+        stripped = stripped.split("\n", 1)[-1]  # drop the opening ```json line
+    if stripped.endswith("```"):
+        stripped = stripped.rsplit("```", 1)[0]  # drop the closing ```
+    stripped = stripped.strip()
+    return stripped
 
 
 def trigger_announcer(message, announcersTriggered):
@@ -62,9 +73,13 @@ def trigger_announcer(message, announcersTriggered):
             announcer.get_config(),
             context=announcer.AnnouncerContext(announcer=1)
         )
+
+        processedAnnouncerMessage = strip_erranwous_json(announcerMessage["messages"][-1].content)
+
+        print(f"Announcer 1:{processedAnnouncerMessage}")
         
         if ENABLE_AUDIO_GENERATION:
-            tts.speak(announcerMessage["messages"][-1].content, 1)
+            tts.speak(processedAnnouncerMessage, 1)
 
 
     if (announcersTriggered == 'two' or announcersTriggered == 'both') and ENABLE_ANNOUNCER_2:
@@ -76,9 +91,10 @@ def trigger_announcer(message, announcersTriggered):
             announcer.get_config(),
             context=announcer.AnnouncerContext(announcer=2)
         )
-        
+        processedAnnouncerMessage = strip_erranwous_json(announcerMessage["messages"][-1].content)
+        print(f"Announcer 2:{processedAnnouncerMessage}")
         if ENABLE_AUDIO_GENERATION:
-            tts.speak(announcerMessage["messages"][-1].content, 2)
+            tts.speak(processedAnnouncerMessage, 2)
 
 
 def parse_messages(buffer: str):
@@ -124,6 +140,7 @@ def update_score(data: dict):
 def handle_time(data: dict):
     global GAME_CLOCK, GAME_STARTED, TEAM_0, TEAM_1, SCORE_TEAM_0, SCORE_TEAM_1, TOURNAMENT_BANTER_HAPPENED
     milestones = [240, 180, 120, 60, 30]
+    previous_game_clock = GAME_CLOCK
 
     GAME_CLOCK = data["Game"]["TimeSeconds"]
     print(f"Time: {GAME_CLOCK} seconds remaining")
@@ -135,12 +152,12 @@ def handle_time(data: dict):
                 break
     
     else:
-        # This is a tournament countdown if the game has not started yet but we are receiving updates
-        if GAME_CLOCK >= 30 and not TOURNAMENT_BANTER_HAPPENED:
+        # This is a tournament countdown if the game has not started yet and the clock is counting down
+        if GAME_CLOCK >= 30 and GAME_CLOCK < previous_game_clock and not TOURNAMENT_BANTER_HAPPENED:
             trigger_announcer(f"Tournament countdown: {GAME_CLOCK} till game start - Teams: {TEAM_0} and {TEAM_1}", 'one')
             trigger_announcer("Tell a funny story about a Rocket League tournament in your past.", 'two')
-            # trigger_announcer("React to the most recent comment with a question about their funny story.", 'one')
-            # trigger_announcer("Answer the question in the previous comment.", 'two')
+            trigger_announcer("React to the most recent comment with a question about their funny story.", 'one')
+            trigger_announcer("Answer the question in the previous comment.", 'two')
             # #Only trigger the tournament banter once
             TOURNAMENT_BANTER_HAPPENED = True
 
